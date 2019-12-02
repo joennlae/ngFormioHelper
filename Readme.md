@@ -48,9 +48,16 @@ Used to set up offline mode for your application and provides widgets and settin
 Used to set up ui-router states, views and default controllers for a Formio Resource.
 
 
+## install for me
 
-## Build with
+``` 
+npm install
+bower install
 
-```
+yarn add gulp@3.9.1
 yarn gulp build
+
+# add new release
+zip release.zip -r . -x "bower_components/*" "node_modules/*" ".git/*"
 ```
+create new release on github
