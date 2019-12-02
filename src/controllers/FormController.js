@@ -31,7 +31,7 @@ angular.module('ngFormBuilderHelper')
       $scope.formTags = [];
 
       $scope.form = {
-        display: 'form',
+        display: 'wizard',
         components: $stateParams.components || [],
         type: ($stateParams.formType ? $stateParams.formType : 'form'),
         publish: Boolean,
@@ -65,6 +65,16 @@ angular.module('ngFormBuilderHelper')
         }
       ];
 
+      $scope.langs = [{
+        name: 'DE',
+        title: 'DE'
+      }, {
+        name: 'FR',
+        title: 'FR'
+      }, {
+        name: 'IT',
+        title: 'IT'
+      }];
 
       $scope.publicate = function (bool) {
         $scope.publish = bool;
