@@ -1,38 +1,76 @@
-<form role="form" novalidate>
-  <div id="form-group-title" class="form-group">
-    <label for="title" class="control-label">Title</label>
-    <input type="text" ng-model="form.title" ng-change="titleChange('{{form.title}}')" class="form-control" id="title" placeholder="Enter the form title"/>
-  </div>
-  <div id="form-group-name" class="form-group">
-    <label for="name" class="control-label">Name</label>
-    <input type="text" ng-model="form.name" class="form-control" id="name" placeholder="Enter the form machine name"/>
-  </div>
-  <div class="row">
-    <div class="col col-sm-4">
-      <div id="form-group-path" class="form-group">
-        <label for="path" class="control-label">Path</label>
-        <input type="text" class="form-control" id="path" ng-model="form.path" placeholder="example" style="text-transform: lowercase">
-        <small>The path alias for this form.</small>
+"<form role="form" novalidate>
+  <div class="row"> <br>
+      <div class="col-md-3 float-left">
+          <label for="formtype" class="control-label uppercase">Display Type</label>
+          <select class="form-control" name="form-display" id="form-display"
+              ng-options="display.name as display.title for display in displays" ng-model="form.display"></select>
       </div>
-    </div>
-    <div class="col col-sm-4">
-      <div id="form-group-display" class="form-group">
-        <label for="display" class="control-label">Display as</label>
-        <select class="form-control" id="display" ng-options="display.name as display.title for display in formDisplays" ng-model="form.display"></select>
+      <div class="col-md-3 float-left">
+          <label for="formtype" class="control-label uppercase">Language</label>
+          <select class="form-control" name="form-lang" id="form-lang"
+              ng-options="lang.name as lang.title for lang in langs" ng-model="form.lang"></select> </div>
+      <div class="col-md-3 float-left">
+          <div id="form-group-title" class="form-group"> <label for="title"
+                  class="control-label uppercase">Title</label>
+              <input type="text" ng-model="form.title" ng-change="titleChange('{{form.title}}')" class="form-control"
+                  id="title" placeholder="Enter the survey title" /> </div>
       </div>
-    </div>
-    <div class="col col-sm-4">
-      <div id="form-group-tags" class="form-group">
-        <label for="tags" class="control-label">Tags</label>
-        <tags-input ng-model="tags" on-tag-added="updateFormTags()" on-tag-removed="updateFormTags()" id="tags"></tags-input>
+      <div class="col-md-3 float-left">
+          <div id="form-group-name" class="form-group"> <label for="name" class="control-label uppercase">Name</label>
+              <input type="text" ng-model="form.name" class="form-control" id="name"
+                  placeholder="Enter the survey name (generated based on title)" /> </div>
       </div>
-    </div>
+      <div class="col-md-3 float-left">
+          <div id="form-group-path" class="form-group"> <label for="path" class="control-label uppercase">Path</label>
+              <input type="text" class="form-control" id="path" ng-trim="false"
+                  ng-change="form.path = form.path.split(' ').join('')" ng-model="form.path" placeholder="example"
+                  text-transform: lowercase>
+          </div>
+          <input type="hidden" ng-model="form.type" />
+      </div>
+      <div ng-show="translating">
+          <div class="col-md-3 float-left">
+              <div id="form-group-path" class="form-group"> <label for="transTitle"
+                      class="control-label uppercase">Translate title</label>
+                  <input ng-show="showTransTitleIT" type="text" class="form-control" id="transTitleIT"
+                      ng-model="transTitleIT" ng-change="transTitleChange(transTitleIT)"
+                      placeholder="Translate the Survey title" text-transform: lowercase>
+                  <input ng-show="showTransTitleFR" type="text" class="form-control" id="transTitleFR"
+                      ng-model="transTitleFR" ng-change="transTitleChange(transTitleFR)"
+                      placeholder="Translate the Survey title" text-transform: lowercase>
+              </div>
+          </div>
+          <div class="col-md-3 float-left">
+              <label for="transtitlebutton" class="control-label uppercase">Translate to</label>
+              <input type="submit" class="btn btn-default" ng-click="translateTo(form.lang)"
+                  value="Import German Survey" />
+          </div>
+      </div>
   </div>
-  <input type="hidden" ng-model="form.type"/>
-  <div ng-include="'formio-helper/formbuilder/settings.html'"></div>
+  <div ng-include="'formio-helper/formbuilder/settings.html'"></div> <br>
   <form-builder form="form" src="formUrl"></form-builder>
-  <div class="form-group pull-right">
-    <a class="btn btn-default" ng-click="cancel()">Cancel</a>
-    <input type="submit" class="btn btn-primary" ng-click="saveForm()" value="{{formId ? 'Save' : 'Create'}} {{ capitalize(form.type)  }}" />
-  </div>
+  <uib-accordion close-others="true">
+      <div class="hundred-fix">
+          <hr>
+      </div>
+      <div class="form-group pull-right float-left">
+          <div class="publish-fix">
+              <label class="control-label publish">Publish Survey</label>
+              <input type="checkbox" ng-model="publish" value="{{publish}}" ng-click="publicate(publish)"> </input>
+          </div>
+          <div class="form-group pull-right float-left">
+              <div class="publish-fix">
+                  <label class="control-label publish">Publish as Diary</label>
+                  <input type="checkbox" ng-model="diary" value="{{diary}}" ng-click="isDiary(diary)"> </input>
+              </div>
+              <div class="publish-fix">
+                  <label class="control-label publish">Is Relative</label>
+                  <input type="checkbox" ng-model="relative" value="{{relative}}" ng-click="isRelative(relative)">
+                  </input>
+              </div>
+              <a class="btn btn-default" ng-click="cancel()">Cancel</a>
+              <input type="submit" class="btn btn-primary" ng-click="saveForm()"
+                  value="{{formId ? 'Save' : 'Create'}} {{ capitalize(form.type)  }}" />
+              </br> </br>
+          </div>
 </form>
