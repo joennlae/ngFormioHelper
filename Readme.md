@@ -46,3 +46,11 @@ Used to set up offline mode for your application and provides widgets and settin
 ### [FormioResource](https://github.com/formio/ngFormioHelper/wiki/FormioResource-Provider)
 
 Used to set up ui-router states, views and default controllers for a Formio Resource.
+
+
+
+## Build with
+
+```
+yarn gulp build
+```
