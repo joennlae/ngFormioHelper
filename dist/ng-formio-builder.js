@@ -164,167 +164,497 @@ angular.module('ngFormBuilderHelper')
 },{}],2:[function(require,module,exports){
 "use strict";
 angular.module('ngFormBuilderHelper')
-.constant('FormController', [
-  '$scope',
-  '$stateParams',
-  '$state',
-  'Formio',
-  'FormioHelperConfig',
-  'FormioAlerts',
-  function (
-    $scope,
-    $stateParams,
-    $state,
-    Formio,
-    FormioHelperConfig,
-    FormioAlerts
-  ) {
-    $scope.loading = true;
-    $scope.hideComponents = [];
-    $scope.submission = {data: {}};
-    $scope.formId = $stateParams.formId;
-    $scope.formUrl = FormioHelperConfig.appUrl + '/form';
-    $scope.appUrl = FormioHelperConfig.appUrl;
-    var formTag = FormioHelperConfig.tag || 'common';
-    $scope.formUrl += $stateParams.formId ? ('/' + $stateParams.formId) : '';
-    $scope.form = {
-      display: 'form',
-      components:[],
-      type: ($stateParams.formType ? $stateParams.formType : 'form'),
-      tags: [formTag]
-    };
-    $scope.tags = [{text: formTag}];
-    $scope.formio = new Formio($scope.formUrl);
-    $scope.formDisplays = [
-      {
-        name: 'form',
-        title: 'Form'
-      },
-      {
-        name: 'wizard',
-        title: 'Wizard'
-      }
-    ];
+  .constant('FormController', [
+    '$scope',
+    '$stateParams',
+    '$state',
+    'Formio',
+    'FormioHelperConfig',
+    'FormioAlerts',
+    function (
+      $scope,
+      $stateParams,
+      $state,
+      Formio,
+      FormioHelperConfig,
+      FormioAlerts,
+      $location
+    ) {
+      $scope.loading = true;
+      $scope.hideComponents = [];
+      $scope.submission = { data: {} };
+      $scope.isCopy = !!($stateParams.components && $stateParams.components.length);
+      $scope.formId = $stateParams.formId;
+      $scope.formUrl = FormioHelperConfig.appUrl + '/form';
+      $scope.appUrl = FormioHelperConfig.appUrl;
+      var formTag = FormioHelperConfig.tag || 'common';
+      $scope.showTransTitleIT = false;
+      $scope.showTransTitleFR = false;
+      $scope.transTitleIT = "";
+      $scope.transTitleFR = "";
+      $scope.formUrl += $stateParams.formId ? ('/' + $stateParams.formId) : '';
+      $scope.formTags = [];
 
-    // Load the form if the id is provided.
-    if ($stateParams.formId) {
-      $scope.formLoadPromise = $scope.formio.loadForm().then(function(form) {
-        form.display = form.display || 'form';
-        $scope.form = form;
-        var tags = form.tags || [];
-        $scope.tags = tags.map(function(tag) { return {text: tag}; });
-        return form;
-      }, FormioAlerts.onError.bind(FormioAlerts));
-    }
-    else {
-      // Load the roles available.
-      if (!$scope.form.submissionAccess) {
-        Formio.makeStaticRequest(Formio.getProjectUrl() + '/role?limit=1000').then(function(roles) {
-          if ($scope.form.submissionAccess) {
-            return;
-          }
-          angular.forEach(roles, function(role) {
-            if (!role.admin && !role.default) {
-              // Add access to the form being created to allow for authenticated people to create their own.
-              $scope.form.submissionAccess = [
-                {
-                  type: 'create_own',
-                  roles: [role._id]
-                },
-                {
-                  type: 'read_own',
-                  roles: [role._id]
-                },
-                {
-                  type: 'update_own',
-                  roles: [role._id]
-                },
-                {
-                  type: 'delete_own',
-                  roles: [role._id]
-                }
-              ];
+      $scope.form = {
+        display: 'form',
+        components: $stateParams.components || [],
+        type: ($stateParams.formType ? $stateParams.formType : 'form'),
+        publish: Boolean,
+        relative: Boolean,
+        lang: String,
+        tags: [formTag],
+        transTitle: {},
+        modified: String,
+        de: $stateParams.de || [],
+        fr: $stateParams.fr || [],
+        it: $stateParams.it || [],
+      };
+
+      $scope.publish = $scope.form.publish || false;
+      $scope.diary = $scope.form.diary || false;
+      $scope.relative = $scope.form.relative || false;
+
+      $scope.form.lang = 'DE';
+      $scope.form.modified = "2017-05-10T23:32:43.219Z";
+
+      $scope.tags = [{ text: formTag }];
+      $scope.formio = new Formio($scope.formUrl);
+      $scope.formDisplays = [
+        {
+          name: 'form',
+          title: 'Form'
+        },
+        {
+          name: 'wizard',
+          title: 'Wizard'
+        }
+      ];
+
+
+      $scope.publicate = function (bool) {
+        $scope.publish = bool;
+        $scope.form.publish = bool;
+        $scope.form.token = Formio.getToken();
+        //  console.log(bool);
+        return $scope.form.publish && $scope.publish;
+      };
+      $scope.isDiary = function (bool) {
+        $scope.diary = bool;
+        $scope.form.diary = bool;
+        $scope.form.token = Formio.getToken();
+        //  console.log(bool);
+        return $scope.form.diary && $scope.diary;
+      };
+      $scope.isRelative = function (bool) {
+        //  console.log(bool)
+        $scope.relative = bool;
+        $scope.form.relative = bool;
+        console.log($scope.form.relative);
+        $scope.form.token = Formio.getToken();
+        return $scope.form.relative && $scope.relative;
+      };
+
+      $scope.addTag = function (tag) {
+        //console.log(tag);
+        if (!$scope.form) {
+          return;
+        }
+        if (!$scope.form.tags) {
+          $scope.form.tags = [];
+        }
+        $scope.form.tags = $scope.formTags;
+
+        //  return $scope.formTags && $scope.form.tags;
+      };
+
+      $scope.removeTag = function (tag) {
+        $scope.form.tags = [];
+        /*if ($scope.form.tags && $scope.form.tags.length) {
+            var tagIndex = $scope.form.tags.indexOf(tag.text);
+            if (tagIndex !== -1) {
+
+                $scope.form.tags.splice(tagIndex, 1);
             }
-          });
+        }*/
+      };
+
+
+      $scope.copyEdit = function () {
+        //console.log($scope.basePath);
+        $state.go($scope.basePath + 'createForm', {
+          components: _.cloneDeep($scope.form.components)
         });
+      };
+
+      $scope.copyOutsite = function (scope) {
+        console.log(scope.form);
+        $scope.form = scope.form;
+        $scope.isCopy = !!(scope.form.components && scope.form.components.length);
+        $scope.isCopying = true;
+        $state.go(scope.basePath + 'createForm', {
+
+          de: _.cloneDeep(scope.form.de),
+          fr: _.cloneDeep(scope.form.fr),
+          it: _.cloneDeep(scope.form.it),
+          components: _.cloneDeep(scope.form.components)
+        });
+
+
+      };
+      $scope.translateTo = function (lang) {
+        if ($stateParams.formId) {
+          $scope.formLoadPromise = $scope.formio.loadForm().then(function (form) {
+            // $scope.form.tags.length = 0;
+            // $scope.form.tags = [];
+            switch (lang) {
+              case 'DE':
+                $scope.form.components = form.de;
+                $scope.form.de = form.de;
+                $scope.translating = false;
+                break;
+              case 'IT':
+
+                $scope.form.lang = lang;
+                $scope.form.components = form.de;
+                $scope.form.it = form.de;
+                $scope.translating = true;
+                break;
+              case 'FR':
+
+                $scope.form.lang = lang;
+                $scope.form.components = form.de;
+                $scope.form.fr = form.de;
+                $scope.translating = true;
+                break;
+            }
+          }, FormioAlerts.onError.bind(FormioAlerts));
+        } else {
+          switch (lang) {
+            case 'DE':
+              console.log($scope.form)
+              if (!$scope.form.de) {
+                $scope.form.de = [];
+              }
+              $scope.form.lang = lang
+              $scope.form.components = $scope.form.de;
+              $scope.translating = false;
+              $scope.showTransTitleIT = false;
+              $scope.showTransTitleFR = false;
+
+              break;
+            case 'IT':
+              console.log($scope.form)
+              if (!$scope.form.it) {
+                $scope.form.it = [];
+              }
+              $scope.form.lang = lang;
+              $scope.form.components = $scope.form.de;
+              $scope.translating = true;
+              $scope.showTransTitleFR = false;
+              $scope.showTransTitleIT = true;
+              break;
+            case 'FR':
+              console.log($scope.form)
+              if (!$scope.form.fr) {
+                $scope.form.fr = [];
+              }
+              $scope.form.lang = lang
+              $scope.form.components = $scope.form.de;
+              $scope.translating = true;
+              $scope.showTransTitleIT = false;
+              $scope.showTransTitleFR = true;
+              break;
+          }
+        }
       }
-    }
 
-    // Match name of form to title if not customized.
-    $scope.titleChange = function(oldTitle) {
-      if (!$scope.form.name || $scope.form.name === _.camelCase(oldTitle)) {
-        $scope.form.name = _.camelCase($scope.form.title);
+      var getForm = function (lang) {
+        if ($stateParams.formId) {
+          console.log($scope.form)
+          $scope.formLoadPromise = $scope.formio.loadForm().then(function (form) {
+            // $scope.form.tags.length = 0;
+            // $scope.form.tags = [];
+
+            switch (lang) {
+              case 'DE':
+
+                $scope.form.lang = lang
+                $scope.form.components = form.de;
+                $scope.form.de = form.de;
+                $scope.translating = false;
+                break;
+              case 'IT':
+
+                $scope.form.lang = lang;
+                $scope.form.components = form.it;
+                $scope.form.it = form.it;
+                $scope.translating = true;
+                if (form.transTitle.it) {
+                  $scope.transTitleIT = form.transTitle.it;
+                }
+                $scope.showTransTitleFR = false;
+                $scope.showTransTitleIT = true;
+                break;
+              case 'FR':
+
+                $scope.form.lang = lang
+                $scope.form.components = form.fr;
+                $scope.form.fr = form.fr;
+                $scope.translating = true;
+                if (form.transTitle.fr) {
+                  $scope.transTitleFR = form.transTitle.fr;
+                }
+                $scope.showTransTitleIT = false;
+                $scope.showTransTitleFR = true;
+                break;
+              default:
+              //  console.log(lang)
+              //$scope.form.lang = lang
+            }
+          }, FormioAlerts.onError.bind(FormioAlerts));
+        } else {
+          switch (lang) {
+            case 'DE':
+              // console.log($scope.form)
+              if (!$scope.form.de) {
+                $scope.form.de = [];
+              }
+              $scope.form.lang = lang;
+              if (!$scope.isCopying) {
+
+                $scope.form.components = $scope.form.de;
+                $scope.translating = false;
+              }
+              break;
+            case 'IT':
+              if (!$scope.form.it) {
+                //  $scope.form.it = [];
+              }
+              $scope.form.lang = lang;
+              if (!$scope.isCopying) {
+                $scope.form.components = $scope.form.it;
+              }
+              $scope.translating = true;
+              $scope.showTransTitleFR = false;
+              $scope.showTransTitleIT = true;
+              console.log($scope.form)
+              break;
+            case 'FR':
+              if (!$scope.form.fr) {
+                $scope.form.fr = [];
+              }
+              $scope.form.lang = lang;
+              if (!$scope.isCopying) {
+                $scope.form.components = $scope.form.fr;
+              }
+              $scope.translating = true;
+              $scope.showTransTitleIT = false;
+              $scope.showTransTitleFR = true;
+              console.log($scope.form)
+              break;
+          }
+        }
       }
-      if ($scope.$parent && $scope.$parent.form) {
-        $scope.$parent.form.title = $scope.form.title;
+
+      // Load the form if the id is provided.
+      if ($stateParams.formId) {
+        $scope.formLoadPromise = $scope.formio.loadForm().then(function (form) {
+          form.display = form.display || 'form';
+          $scope.form = form;
+          var tags = form.tags || [];
+          $scope.tags = tags.map(function (tag) { return { text: tag }; });
+          switch (form.lang) {
+            case 'DE':
+              $scope.form.components = form.de;
+              $scope.translating = false;
+              break;
+            case 'IT':
+              $scope.form.components = form.it;
+              $scope.form.it = form.it;
+              $scope.translating = true;
+              $scope.showTransTitleFR = false;
+              $scope.showTransTitleIT = true;
+              break;
+            case 'FR':
+              $scope.form.components = form.fr;
+              $scope.form.fr = form.fr;
+              $scope.translating = true;
+              $scope.showTransTitleIT = false;
+              $scope.showTransTitleFR = true;
+              break;
+          }
+
+          $scope.relative = $scope.form.relative;
+          $scope.formTags = $scope.form.tags;
+          $scope.publish = $scope.form.publish;
+          $scope.diary = $scope.form.diary;
+          return form;
+        }, FormioAlerts.onError.bind(FormioAlerts));
       }
-    };
+      else {
+        // Load the roles available.
+        if (!$scope.form.submissionAccess) {
+          Formio.makeStaticRequest(Formio.getProjectUrl() + '/role?limit=1000').then(function (roles) {
+            if ($scope.form.submissionAccess) {
+              return;
+            }
+            angular.forEach(roles, function (role) {
+              if (!role.admin && !role.default) {
+                // Add access to the form being created to allow for authenticated people to create their own.
+                $scope.form.submissionAccess = [
+                  {
+                    type: 'create_own',
+                    roles: [role._id]
+                  },
+                  {
+                    type: 'read_own',
+                    roles: [role._id]
+                  },
+                  {
+                    type: 'update_own',
+                    roles: [role._id]
+                  },
+                  {
+                    type: 'delete_own',
+                    roles: [role._id]
+                  }
+                ];
+              }
+            });
+          });
+        }
+      }
 
-    // Update form tags
-    $scope.updateFormTags = function() {
-      $scope.form.tags = $scope.tags.map(function(tag) { return tag.text; });
-    };
+      // Match name of form to title if not customized.
+      $scope.titleChange = function (oldTitle) {
+        if (!$scope.form.name || $scope.form.name === _.camelCase(oldTitle)) {
+          $scope.form.name = _.camelCase($scope.form.title);
+        }
+        if ($scope.$parent && $scope.$parent.form) {
+          $scope.$parent.form.title = $scope.form.title;
+        }
+      };
 
-    // When display is updated
-    $scope.$watch('form.display', function (display) {
-      $scope.$broadcast('formDisplay', display);
-    });
+      $scope.transTitleChange = function (oldTitle) {
+        if ($scope.form.lang == 'FR') {
+          console.log(oldTitle)
+          $scope.form.transTitle.fr = oldTitle;
+          // $scope.transTitleFR = oldTitle;
+        }
+        if ($scope.form.lang == 'IT') {
+          console.log(oldTitle)
+          $scope.form.transTitle.it = oldTitle;
+          //$scope.transTitleIT = oldTitle;
+        }
+      };
 
-    // When a submission is made.
-    $scope.$on('formSubmission', function(event, submission) {
-      FormioAlerts.addAlert({
-        type: 'success',
-        message: 'New submission added!'
+      // Update form tags
+      $scope.updateFormTags = function () {
+        $scope.form.tags = $scope.tags.map(function (tag) { return tag.text; });
+      };
+
+      // When display is updated
+      $scope.$watch('form.display', function (display) {
+        $scope.$broadcast('formDisplay', display);
       });
-      if (submission._id) {
-        $state.go($scope.basePath + 'form.submission.view', {subId: submission._id});
-      }
-    });
 
-    $scope.$on('pagination:error', function() {
-      $scope.loading = false;
-    });
-    $scope.$on('pagination:loadPage', function() {
-      $scope.loading = false;
-    });
-
-    // Called when the form is updated.
-    $scope.$on('formUpdate', function(event, form) {
-      $scope.form.components = form.components;
-    });
-
-    $scope.$on('formError', function(event, error) {
-      FormioAlerts.onError(error);
-    });
-
-    // Called when the form or resource is deleted.
-    $scope.$on('delete', function() {
-      var type = $scope.form.type === 'form' ? 'Form ' : 'Resource ';
-      FormioAlerts.addAlert({
-        type: 'success',
-        message: type + $scope.form.name + ' was deleted.'
-      });
-      $state.go($scope.basePath + 'home');
-    });
-
-    $scope.$on('cancel', function() {
-      $state.go($scope.basePath + 'form.view');
-    });
-
-    // Save a form.
-    $scope.saveForm = function() {
-      $scope.formio.saveForm(angular.copy($scope.form)).then(function(form) {
-        angular.merge($scope.form, form);
-        var method = $stateParams.formId ? 'updated' : 'created';
+      // When a submission is made.
+      $scope.$on('formSubmission', function (event, submission) {
         FormioAlerts.addAlert({
           type: 'success',
-          message: 'Successfully ' + method + ' form!'
+          message: 'New submission added!'
         });
-        $state.go($scope.basePath + 'form.view', {formId: form._id});
-      }, FormioAlerts.onError.bind(FormioAlerts));
-    };
-  }
-]);
+        if (submission._id) {
+          $state.go($scope.basePath + 'form.submission.view', { subId: submission._id });
+        }
+      });
+
+      $scope.$on('pagination:error', function () {
+        $scope.loading = false;
+      });
+      $scope.$on('pagination:loadPage', function () {
+        $scope.loading = false;
+      });
+
+      // Called when the form is updated.
+      $scope.$on('formUpdate', function (event, form) {
+        $scope.form.components = form.components;
+      });
+
+      $scope.$on('formError', function (event, error) {
+        //FormioAlerts.onError(error);
+      });
+
+      $scope.$watch('form.lang', function (lang) {
+        console.log($scope.form);
+        getForm(lang);
+      });
+
+      // Called when the form or resource is deleted.
+      $scope.$on('delete', function () {
+        var type = $scope.form.type === 'form' ? 'Form ' : 'Resource ';
+        FormioAlerts.addAlert({
+          type: 'success',
+          message: type + $scope.form.name + ' was deleted.'
+        });
+        $state.go($scope.basePath + 'home');
+      });
+
+      $scope.$on('cancel', function () {
+        $state.go($scope.basePath + 'form.view');
+      });
+
+      $scope.cancel = function () {
+        //console.log('cancel');
+        $location.path('/')
+        // $state.go($scope.basePath + '/');
+      }
+
+      // Save a form.
+      $scope.saveForm = function () {
+        $scope.form.transTitle.de = $scope.form.title;
+
+        console.log($scope.form)
+        switch ($scope.form.lang) {
+          case 'DE':
+            console.log($scope.form)
+            if (!$scope.form.de) {
+              $scope.form.de = [];
+            }
+            $scope.form.de = $scope.form.components;
+            break;
+          case 'IT':
+            if (!$scope.form.it) {
+              $scope.form.it = [];
+            }
+            $scope.form.it = $scope.form.components;
+            break;
+          case 'FR':
+            if (!$scope.form.fr) {
+              $scope.form.fr = [];
+            }
+            $scope.form.fr = $scope.form.components;
+            break;
+        }
+        $scope.formio.saveForm(angular.copy($scope.form)).then(function (form) {
+
+          var numPages = $scope.form.numPages
+          $scope.form = form;
+          $scope.form.numPages = numPages;
+          console.log($scope.form.relative)
+
+          //$scope.$emit('formUpdate2',form);
+
+          var method = $stateParams.formId ? 'updated' : 'created';
+          FormioAlerts.addAlert({
+            type: 'success',
+            message: 'Successfully ' + method + ' form!'
+          });
+          $state.go($scope.basePath + 'form.edit', { formId: form._id });
+        }, FormioAlerts.onError.bind(FormioAlerts));
+      };
+    }
+  ]);
 
 },{}],3:[function(require,module,exports){
 "use strict";
@@ -586,7 +916,7 @@ angular.module('ngFormBuilderHelper', [
     );
 
     $templateCache.put('formio-helper/formbuilder/edit.html',
-      "<form role=\"form\" novalidate>\n  <div id=\"form-group-title\" class=\"form-group\">\n    <label for=\"title\" class=\"control-label\">Title</label>\n    <input type=\"text\" ng-model=\"form.title\" ng-change=\"titleChange('{{form.title}}')\" class=\"form-control\" id=\"title\" placeholder=\"Enter the form title\"/>\n  </div>\n  <div id=\"form-group-name\" class=\"form-group\">\n    <label for=\"name\" class=\"control-label\">Name</label>\n    <input type=\"text\" ng-model=\"form.name\" class=\"form-control\" id=\"name\" placeholder=\"Enter the form machine name\"/>\n  </div>\n  <div class=\"row\">\n    <div class=\"col col-sm-4\">\n      <div id=\"form-group-path\" class=\"form-group\">\n        <label for=\"path\" class=\"control-label\">Path</label>\n        <input type=\"text\" class=\"form-control\" id=\"path\" ng-model=\"form.path\" placeholder=\"example\" style=\"text-transform: lowercase\">\n        <small>The path alias for this form.</small>\n      </div>\n    </div>\n    <div class=\"col col-sm-4\">\n      <div id=\"form-group-display\" class=\"form-group\">\n        <label for=\"display\" class=\"control-label\">Display as</label>\n        <select class=\"form-control\" id=\"display\" ng-options=\"display.name as display.title for display in formDisplays\" ng-model=\"form.display\"></select>\n      </div>\n    </div>\n    <div class=\"col col-sm-4\">\n      <div id=\"form-group-tags\" class=\"form-group\">\n        <label for=\"tags\" class=\"control-label\">Tags</label>\n        <tags-input ng-model=\"tags\" on-tag-added=\"updateFormTags()\" on-tag-removed=\"updateFormTags()\" id=\"tags\"></tags-input>\n      </div>\n    </div>\n  </div>\n  <input type=\"hidden\" ng-model=\"form.type\"/>\n  <div ng-include=\"'formio-helper/formbuilder/settings.html'\"></div>\n  <form-builder form=\"form\" src=\"formUrl\"></form-builder>\n  <div class=\"form-group pull-right\">\n    <a class=\"btn btn-default\" ng-click=\"cancel()\">Cancel</a>\n    <input type=\"submit\" class=\"btn btn-primary\" ng-click=\"saveForm()\" value=\"{{formId ? 'Save' : 'Create'}} {{ capitalize(form.type)  }}\" />\n  </div>\n</form>\n"
+      "\"<form role=\"form\" novalidate>\n  <div class=\"row\"> <br>\n      <div class=\"col-md-3 float-left\">\n          <label for=\"formtype\" class=\"control-label uppercase\">Display Type</label>\n          <select class=\"form-control\" name=\"form-display\" id=\"form-display\"\n              ng-options=\"display.name as display.title for display in displays\" ng-model=\"form.display\"></select>\n      </div>\n      <div class=\"col-md-3 float-left\">\n          <label for=\"formtype\" class=\"control-label uppercase\">Language</label>\n          <select class=\"form-control\" name=\"form-lang\" id=\"form-lang\"\n              ng-options=\"lang.name as lang.title for lang in langs\" ng-model=\"form.lang\"></select> </div>\n      <div class=\"col-md-3 float-left\">\n          <div id=\"form-group-title\" class=\"form-group\"> <label for=\"title\"\n                  class=\"control-label uppercase\">Title</label>\n              <input type=\"text\" ng-model=\"form.title\" ng-change=\"titleChange('{{form.title}}')\" class=\"form-control\"\n                  id=\"title\" placeholder=\"Enter the survey title\" /> </div>\n      </div>\n      <div class=\"col-md-3 float-left\">\n          <div id=\"form-group-name\" class=\"form-group\"> <label for=\"name\" class=\"control-label uppercase\">Name</label>\n              <input type=\"text\" ng-model=\"form.name\" class=\"form-control\" id=\"name\"\n                  placeholder=\"Enter the survey name (generated based on title)\" /> </div>\n      </div>\n      <div class=\"col-md-3 float-left\">\n          <div id=\"form-group-path\" class=\"form-group\"> <label for=\"path\" class=\"control-label uppercase\">Path</label>\n              <input type=\"text\" class=\"form-control\" id=\"path\" ng-trim=\"false\"\n                  ng-change=\"form.path = form.path.split(' ').join('')\" ng-model=\"form.path\" placeholder=\"example\"\n                  text-transform: lowercase>\n          </div>\n          <input type=\"hidden\" ng-model=\"form.type\" />\n      </div>\n      <div ng-show=\"translating\">\n          <div class=\"col-md-3 float-left\">\n              <div id=\"form-group-path\" class=\"form-group\"> <label for=\"transTitle\"\n                      class=\"control-label uppercase\">Translate title</label>\n                  <input ng-show=\"showTransTitleIT\" type=\"text\" class=\"form-control\" id=\"transTitleIT\"\n                      ng-model=\"transTitleIT\" ng-change=\"transTitleChange(transTitleIT)\"\n                      placeholder=\"Translate the Survey title\" text-transform: lowercase>\n                  <input ng-show=\"showTransTitleFR\" type=\"text\" class=\"form-control\" id=\"transTitleFR\"\n                      ng-model=\"transTitleFR\" ng-change=\"transTitleChange(transTitleFR)\"\n                      placeholder=\"Translate the Survey title\" text-transform: lowercase>\n              </div>\n          </div>\n          <div class=\"col-md-3 float-left\">\n              <label for=\"transtitlebutton\" class=\"control-label uppercase\">Translate to</label>\n              <input type=\"submit\" class=\"btn btn-default\" ng-click=\"translateTo(form.lang)\"\n                  value=\"Import German Survey\" />\n          </div>\n      </div>\n  </div>\n  <div ng-include=\"'formio-helper/formbuilder/settings.html'\"></div> <br>\n  <form-builder form=\"form\" src=\"formUrl\"></form-builder>\n  <uib-accordion close-others=\"true\">\n      <div class=\"hundred-fix\">\n          <hr>\n      </div>\n      <div class=\"form-group pull-right float-left\">\n          <div class=\"publish-fix\">\n              <label class=\"control-label publish\">Publish Survey</label>\n              <input type=\"checkbox\" ng-model=\"publish\" value=\"{{publish}}\" ng-click=\"publicate(publish)\"> </input>\n          </div>\n          <div class=\"form-group pull-right float-left\">\n              <div class=\"publish-fix\">\n                  <label class=\"control-label publish\">Publish as Diary</label>\n                  <input type=\"checkbox\" ng-model=\"diary\" value=\"{{diary}}\" ng-click=\"isDiary(diary)\"> </input>\n              </div>\n              <div class=\"publish-fix\">\n                  <label class=\"control-label publish\">Is Relative</label>\n                  <input type=\"checkbox\" ng-model=\"relative\" value=\"{{relative}}\" ng-click=\"isRelative(relative)\">\n                  </input>\n              </div>\n              <a class=\"btn btn-default\" ng-click=\"cancel()\">Cancel</a>\n              <input type=\"submit\" class=\"btn btn-primary\" ng-click=\"saveForm()\"\n                  value=\"{{formId ? 'Save' : 'Create'}} {{ capitalize(form.type)  }}\" />\n              </br> </br>\n          </div>\n</form>"
     );
 
     $templateCache.put('formio-helper/formbuilder/form.html',
@@ -674,151 +1004,164 @@ require('./providers/FormioFormBuilder.js');
 },{"./controllers/FormActionController.js":1,"./controllers/FormController.js":2,"./controllers/FormIndexController.js":3,"./controllers/FormSubmissionController.js":4,"./controllers/RoleController.js":5,"./directives/permissionEditor.js":6,"./factories/FormioHelperConfig.js":7,"./providers/FormioFormBuilder.js":9}],9:[function(require,module,exports){
 "use strict";
 angular.module('ngFormBuilderHelper')
-.provider('FormioFormBuilder', [
-  '$stateProvider',
-  'FormioHelperConfig',
-  function (
-    $stateProvider,
-    FormioHelperConfig
-  ) {
-    return {
-      register: function (name, url, options) {
-        options = options || {};
-        var templates = options.templates ? options.templates : {};
-        var controllers = options.controllers ? options.controllers : {};
-        var basePath = options.base ? options.base : '';
-        if (!basePath) {
-          basePath = name ? name + '.' : '';
-        }
-
-        // Set the configurations.
-        FormioHelperConfig.appUrl = url;
-        FormioHelperConfig.tag = options.tag || 'common';
-        FormioHelperConfig.perPage = options.perPage || 10;
-
-        // Method for quick execution.
-        var execute = function(path) {
-          return function($scope, $controller, Controller) {
-            $scope.basePath = basePath;
-            $scope.statePath = path;
-            if (Controller) {
-              $controller(Controller, {'$scope': $scope});
-            }
-            var subController = _.get(controllers, path);
-            if (subController) {
-              $controller(subController, {'$scope': $scope});
-            }
+  .provider('FormioFormBuilder', [
+    '$stateProvider',
+    'FormioHelperConfig',
+    function (
+      $stateProvider,
+      FormioHelperConfig
+    ) {
+      return {
+        register: function (name, url, options) {
+          options = options || {};
+          var templates = options.templates ? options.templates : {};
+          var controllers = options.controllers ? options.controllers : {};
+          var basePath = options.base ? options.base : '';
+          if (!basePath) {
+            basePath = name ? name + '.' : '';
           }
-        };
 
-        $stateProvider
-          .state(basePath + 'formIndex', {
-            url: '/forms',
-            ncyBreadcrumb: {skip: true},
-            templateUrl: _.get(templates, 'form.index', 'formio-helper/formbuilder/index.html'),
-            controller: ['$scope', '$controller', 'FormIndexController', execute('form.index')]
-          })
-          .state(basePath + 'createForm', {
-            url: '/create/:formType',
-            ncyBreadcrumb: {skip: true},
-            templateUrl: _.get(templates, 'form.create', 'formio-helper/formbuilder/create.html'),
-            controller: ['$scope', '$controller', 'FormController', execute('form.create')]
-          })
-          .state(basePath + 'form', {
-            abstract: true,
-            url: '/form/:formId',
-            ncyBreadcrumb: _.get(options, 'breadcrumb.form', {skip: true}),
-            templateUrl: _.get(templates, 'form.abstract', 'formio-helper/formbuilder/form.html'),
-            controller: ['$scope', '$controller', 'FormController', execute('form.abstract')]
-          })
-          .state(basePath + 'form.view', {
-            url: '/',
-            ncyBreadcrumb: {skip: true},
-            templateUrl: _.get(templates, 'form.view', 'formio-helper/formbuilder/view.html'),
-            controller: ['$scope', '$controller', execute('form.view')]
-          })
-          .state(basePath + 'form.edit', {
-            url: '/edit',
-            ncyBreadcrumb: {skip: true},
-            templateUrl: _.get(templates, 'form.edit', 'formio-helper/formbuilder/edit.html'),
-            controller: ['$scope', '$controller', 'FormController', execute('form.edit')]
-          })
-          .state(basePath + 'form.delete', {
-            url: '/delete',
-            ncyBreadcrumb: {skip: true},
-            templateUrl: _.get(templates, 'form.delete', 'formio-helper/formbuilder/delete.html'),
-            controller: ['$scope', '$controller', execute('form.delete')]
+          // Set the configurations.
+          FormioHelperConfig.appUrl = url;
+          FormioHelperConfig.tag = options.tag || 'common';
+          FormioHelperConfig.perPage = options.perPage || 10;
+
+          // Method for quick execution.
+          var execute = function (path) {
+            return function ($scope, $controller, Controller) {
+              $scope.basePath = basePath;
+              $scope.statePath = path;
+
+              var injector = angular.injector(['ng']),
+
+                q = injector.get('$q');
+              var deferred = q.defer();
+
+              if (Controller) {
+                $controller(Controller, { '$scope': $scope });
+                deferred.resolve($scope.isCopy);
+                if ($scope.isCopy) {
+                  console.log($scope.form)
+                  $scope.copyOutsite($scope)
+                }
+              }
+              var subController = _.get(controllers, path);
+              if (subController) {
+                $controller(subController, { '$scope': $scope });
+              }
+            }
+          };
+
+          $stateProvider
+            .state(basePath + 'formIndex', {
+              url: '/forms',
+              ncyBreadcrumb: { skip: true },
+              templateUrl: _.get(templates, 'form.index', 'formio-helper/formbuilder/index.html'),
+              controller: ['$scope', '$controller', 'FormIndexController', execute('form.index')]
+            })
+            .state(basePath + 'createForm', {
+              url: '/create/:formType',
+              ncyBreadcrumb: { skip: true },
+              templateUrl: _.get(templates, 'form.create', 'formio-helper/formbuilder/create.html'),
+              controller: ['$scope', '$controller', 'FormController', execute('form.create')],
+              params: { formType: 'form', components: null, de: null, fr: null, it: null },
+            })
+            .state(basePath + 'form', {
+              abstract: true,
+              url: '/form/:formId',
+              ncyBreadcrumb: _.get(options, 'breadcrumb.form', { skip: true }),
+              templateUrl: _.get(templates, 'form.abstract', 'formio-helper/formbuilder/form.html'),
+              controller: ['$scope', '$controller', 'FormController', execute('form.abstract')]
+            })
+            .state(basePath + 'form.view', {
+              url: '/',
+              ncyBreadcrumb: { skip: true },
+              templateUrl: _.get(templates, 'form.view', 'formio-helper/formbuilder/view.html'),
+              controller: ['$scope', '$controller', execute('form.view')]
+            })
+            .state(basePath + 'form.edit', {
+              url: '/edit',
+              ncyBreadcrumb: { skip: true },
+              templateUrl: _.get(templates, 'form.edit', 'formio-helper/formbuilder/edit.html'),
+              controller: ['$scope', '$controller', 'FormController', execute('form.edit')],
+              params: { formType: 'form', formId: 'formId', form: null, isCopy: false, pageNum: null, components: null, de: null, fr: null, it: null }
+            })
+            .state(basePath + 'form.delete', {
+              url: '/delete',
+              ncyBreadcrumb: { skip: true },
+              templateUrl: _.get(templates, 'form.delete', 'formio-helper/formbuilder/delete.html'),
+              controller: ['$scope', '$controller', execute('form.delete')]
+            });
+
+          var formStates = {};
+          formStates[basePath + 'form.submission'] = {
+            name: 'submission',
+            id: 'subId',
+            controller: ['$scope', '$controller', 'FormSubmissionController', execute('submission.index')]
+          };
+          formStates[basePath + 'form.action'] = {
+            name: 'action',
+            id: 'actionId',
+            controller: ['$scope', '$controller', 'FormActionController', execute('action.index')]
+          };
+
+          angular.forEach(formStates, function (info, state) {
+            $stateProvider
+              .state(state + 'Index', {
+                url: '/' + info.name,
+                ncyBreadcrumb: { skip: true },
+                templateUrl: _.get(templates, info.name + '.index', 'formio-helper/formbuilder/' + info.name + '/index.html'),
+                controller: info.controller
+              })
+              .state(state, {
+                abstract: true,
+                ncyBreadcrumb: _.get(options, 'breadcrumb.' + info.name, { skip: true }),
+                url: '/' + info.name + '/:' + info.id,
+                controller: info.controller,
+                templateUrl: _.get(templates, info.name + '.abstract', 'formio-helper/formbuilder/' + info.name + '/item.html')
+              })
+              .state(state + '.view', {
+                url: '',
+                ncyBreadcrumb: { skip: true },
+                templateUrl: _.get(templates, info.name + '.view', 'formio-helper/formbuilder/' + info.name + '/view.html'),
+                controller: ['$scope', '$controller', execute(info.name + '.view')]
+              })
+              .state(state + '.edit', {
+                url: '/edit',
+                ncyBreadcrumb: { skip: true },
+                templateUrl: _.get(templates, info.name + '.edit', 'formio-helper/formbuilder/' + info.name + '/edit.html'),
+                controller: ['$scope', '$controller', execute(info.name + '.edit')]
+              })
+              .state(state + '.delete', {
+                url: '/delete',
+                ncyBreadcrumb: { skip: true },
+                templateUrl: _.get(templates, info.name + '.delete', 'formio-helper/formbuilder/' + info.name + '/delete.html'),
+                controller: ['$scope', '$controller', execute(info.name + '.delete')]
+              });
           });
 
-        var formStates = {};
-        formStates[basePath + 'form.submission'] = {
-          name: 'submission',
-          id: 'subId',
-          controller: ['$scope', '$controller', 'FormSubmissionController', execute('submission.index')]
-        };
-        formStates[basePath + 'form.action'] = {
-          name: 'action',
-          id: 'actionId',
-          controller: ['$scope', '$controller', 'FormActionController', execute('action.index')]
-        };
+          // Add the action adding state.
+          $stateProvider.state(basePath + 'form.action.add', {
+            url: '/add/:actionName',
+            ncyBreadcrumb: { skip: true },
+            templateUrl: _.get(templates, 'action.add', 'formio-helper/formbuilder/action/add.html'),
+            controller: ['$scope', '$controller', 'FormActionController', execute('action.add')],
+            params: { actionInfo: null }
+          });
 
-        angular.forEach(formStates, function(info, state) {
-          $stateProvider
-            .state(state + 'Index', {
-              url: '/' + info.name,
-              ncyBreadcrumb: {skip: true},
-              templateUrl: _.get(templates, info.name + '.index', 'formio-helper/formbuilder/' + info.name + '/index.html'),
-              controller: info.controller
-            })
-            .state(state, {
-              abstract: true,
-              ncyBreadcrumb: _.get(options, 'breadcrumb.' + info.name, {skip: true}),
-              url: '/' + info.name + '/:' + info.id,
-              controller: info.controller,
-              templateUrl: _.get(templates, info.name + '.abstract', 'formio-helper/formbuilder/' + info.name + '/item.html')
-            })
-            .state(state + '.view', {
-              url: '',
-              ncyBreadcrumb: {skip: true},
-              templateUrl: _.get(templates, info.name + '.view', 'formio-helper/formbuilder/' + info.name + '/view.html'),
-              controller: ['$scope', '$controller', execute(info.name + '.view')]
-            })
-            .state(state + '.edit', {
-              url: '/edit',
-              ncyBreadcrumb: {skip: true},
-              templateUrl: _.get(templates, info.name + '.edit', 'formio-helper/formbuilder/' + info.name + '/edit.html'),
-              controller: ['$scope', '$controller', execute(info.name + '.edit')]
-            })
-            .state(state + '.delete', {
-              url: '/delete',
-              ncyBreadcrumb: {skip: true},
-              templateUrl: _.get(templates, info.name + '.delete', 'formio-helper/formbuilder/' + info.name + '/delete.html'),
-              controller: ['$scope', '$controller', execute(info.name + '.delete')]
-            });
-        });
-
-        // Add the action adding state.
-        $stateProvider.state(basePath + 'form.action.add', {
-          url: '/add/:actionName',
-          ncyBreadcrumb: {skip: true},
-          templateUrl: _.get(templates, 'action.add', 'formio-helper/formbuilder/action/add.html'),
-          controller: ['$scope', '$controller', 'FormActionController', execute('action.add')],
-          params: {actionInfo: null}
-        });
-
-        // Add permission state.
-        $stateProvider.state(basePath + 'form.permission', {
-          url: '/permission',
-          ncyBreadcrumb: {skip: true},
-          templateUrl: _.get(templates, 'permission.index', 'formio-helper/formbuilder/permission/index.html'),
-          controller: ['$scope', '$controller', 'RoleController', execute('permission.index')]
-        });
-      },
-      $get: function () {
-        return {};
-      }
-    };
-  }
-]);
+          // Add permission state.
+          $stateProvider.state(basePath + 'form.permission', {
+            url: '/permission',
+            ncyBreadcrumb: { skip: true },
+            templateUrl: _.get(templates, 'permission.index', 'formio-helper/formbuilder/permission/index.html'),
+            controller: ['$scope', '$controller', 'RoleController', execute('permission.index')]
+          });
+        },
+        $get: function () {
+          return {};
+        }
+      };
+    }
+  ]);
 
 },{}]},{},[8]);
