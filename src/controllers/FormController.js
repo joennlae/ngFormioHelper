@@ -77,10 +77,13 @@ angular.module('ngFormBuilderHelper')
       }];
 
       $scope.publicate = function (bool) {
-        $scope.publish = bool;
+        bool = !bool;
+        //$scope.publish = bool;
         $scope.form.publish = bool;
         $scope.form.token = Formio.getToken();
-        //  console.log(bool);
+        console.log('publicate',bool);
+        console.log('form', $scope.form);
+        $scope.publish = $scope.form.publish;
         return $scope.form.publish && $scope.publish;
       };
       $scope.isDiary = function (bool) {
